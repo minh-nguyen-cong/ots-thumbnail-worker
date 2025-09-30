@@ -19,6 +19,7 @@ import org.springframework.messaging.Message;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.function.Consumer;
 
 @Configuration
