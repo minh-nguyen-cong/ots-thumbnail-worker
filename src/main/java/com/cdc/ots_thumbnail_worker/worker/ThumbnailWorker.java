@@ -38,13 +38,15 @@ public class ThumbnailWorker {
     }
 
     @Bean
-    public Consumer<Message<String>> generateThumbnail() {
+    public Consumer<Message<GcsEvent>> generateThumbnail() {
         return message -> {
-            Long imageId = Long.parseLong(message.getPayload());
-            logger.info("Received request to generate thumbnail for image ID: {}", imageId);
+            GcsEvent event = message.getPayload();
+            String gcsPath = event.getName();
 
-            Image image = imageRepository.findById(imageId)
-                    .orElseThrow(() -> new RuntimeException("Image not found with ID: " + imageId));
+            logger.info("Received GCS event for file: {}", gcsPath);
+
+            Image image = imageRepository.findByGcsPath(gcsPath)
+                    .orElseThrow(() -> new RuntimeException("Image metadata not found for GCS path: " + gcsPath));
 
             try {
                 // 1. Update status to PROCESSING
@@ -78,10 +80,10 @@ public class ThumbnailWorker {
                 image.setThumbnailUrl(uploadedThumbnail.getMediaLink()); // Public URL
                 imageRepository.save(image);
 
-                logger.info("Successfully generated thumbnail for image ID: {}", imageId);
+                logger.info("Successfully generated thumbnail for image ID: {}", image.getId());
 
             } catch (Exception e) {
-                logger.error("Failed to generate thumbnail for image ID: {}", imageId, e);
+                logger.error("Failed to generate thumbnail for image ID: {}", image.getId(), e);
                 // Update status to ERROR on failure
                 image.setThumbnailStatus(Image.ThumbnailStatus.ERROR);
                 imageRepository.save(image);
