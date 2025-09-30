@@ -1,0 +1,56 @@
+substitutions:
+  _SERVICE_NAME: thumbnail-worker
+  _REGION: asia-southeast1
+  _IMAGE_NAME: asia-southeast1-docker.pkg.dev/cdc-online-thumbnail-service/cdc-online-thumbnail-service-repo/thumbnail-worker
+  _CLOUDSQL_INSTANCE: cdc-online-thumbnail-service:asia-southeast1:gcp-mysql-thumbnail-db
+  _DB_NAME: thumbnail_db
+  _DB_USERNAME_SECRET: cdc-online-thumbnail-service-db-username
+  _DB_PASSWORD_SECRET: cdc-online-thumbnail-service-db-password
+  _GCS_RAW_IMAGES_BUCKET_NAME: cdc-online-thumbnail-service-bucket-raw-images
+  _GCS_THUMBNAILS_BUCKET_NAME: cdc-online-thumbnail-service-bucket-thumbnails
+  _DB_MAX_POOL_SIZE: "5"
+
+steps:
+  # Step 1: Use Maven to build the JAR (skipping tests)
+  - name: 'gcr.io/cloud-builders/mvn'
+    entrypoint: 'mvn'
+    args: ['clean', 'package', '-DskipTests']
+
+  # Step 2: Build Docker image using final JAR
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'build',
+        '-t', '${_IMAGE_NAME}',
+        '.'
+      ]
+
+  # Step 3: Push Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_IMAGE_NAME}']
+
+  # Step 4: Deploy to Cloud Run as a private service
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      [
+        'run', 'deploy', '${_SERVICE_NAME}',
+        '--image', '${_IMAGE_NAME}',
+        '--region', '${_REGION}',
+        '--platform', 'managed',
+        '--set-cloudsql-instances', '${_CLOUDSQL_INSTANCE}',
+        '--set-env-vars', 'SPRING_PROFILES_ACTIVE=prod',
+        '--set-env-vars', 'SPRING_CLOUD_GCP_SQL_DATABASE_NAME=${_DB_NAME}',
+        '--set-env-vars', 'SPRING_CLOUD_GCP_SQL_INSTANCE_CONNECTION_NAME=${_CLOUDSQL_INSTANCE}',
+        '--set-env-vars', 'GCS_BUCKET_RAW_IMAGES=${_GCS_RAW_IMAGES_BUCKET_NAME}',
+        '--set-env-vars', 'GCS_BUCKET_THUMBNAILS=${_GCS_THUMBNAILS_BUCKET_NAME}',
+        '--set-env-vars', 'DB_MAX_POOL_SIZE=${_DB_MAX_POOL_SIZE}',
+        '--set-secrets', 'DB_USERNAME=${_DB_USERNAME_SECRET}:latest',
+        '--set-secrets', 'DB_PASSWORD=${_DB_PASSWORD_SECRET}:latest'
+      ]
+
+images:
+  - '${_IMAGE_NAME}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
