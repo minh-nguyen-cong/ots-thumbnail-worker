@@ -7,6 +7,9 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import net.coobird.thumbnailator.Thumbnails;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.cloudevents.CloudEvent;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,16 +35,26 @@ public class ThumbnailWorker {
     @Value("${gcs.bucket.thumbnails}")
     private String thumbnailsBucket;
 
-    public ThumbnailWorker(ImageRepository imageRepository, Storage storage) {
+    private final ObjectMapper objectMapper;
+
+    public ThumbnailWorker(ImageRepository imageRepository, Storage storage, ObjectMapper objectMapper) {
         this.imageRepository = imageRepository;
         this.storage = storage;
+        this.objectMapper = objectMapper;
     }
 
     @Bean
-    public Consumer<Message<GcsEvent>> generateThumbnail() {
+    public Consumer<Message<CloudEvent>> generateThumbnail() {
         return message -> {
-            GcsEvent event = message.getPayload();
-            String gcsPath = event.getName();
+            CloudEvent event = message.getPayload();
+            String gcsPath;
+            try {
+                GcsEvent gcsEvent = objectMapper.readValue(event.getData().toBytes(), GcsEvent.class);
+                gcsPath = gcsEvent.getName();
+            } catch (IOException e) {
+                logger.error("Failed to deserialize GCS event data", e);
+                throw new RuntimeException(e);
+            }
 
             logger.info("Received GCS event for file: {}", gcsPath);
 

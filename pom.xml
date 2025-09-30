@@ -50,6 +50,12 @@
 			<artifactId>spring-cloud-function-adapter-gcp</artifactId>
 		</dependency>
 
+		<!-- CloudEvents Dependency -->
+		<dependency>
+			<groupId>io.cloudevents</groupId>
+			<artifactId>cloudevents-spring</artifactId>
+		</dependency>
+
 		<!-- Database Connector -->
 		<dependency>
 			<groupId>com.google.cloud.sql</groupId>
