@@ -1,31 +1,34 @@
 package com.cdc.ots_thumbnail_worker.controller;
 
-import java.util.logging.Logger;
-
-import org.springframework.stereotype.Controller;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.cdc.ots_thumbnail_worker.worker.ThumbnailWorker;
+import com.cdc.ots_thumbnail_worker.controller.dto.ThumbnailRequest;
+import com.cdc.ots_thumbnail_worker.service.ThumbnailWorkerService;
 
 
-@Controller
+@RestController
 public class ThumbnailWorkerController {
     
-    private final ThumbnailWorker thumbnailWorker;
-    private final Logger logger = Logger.getLogger(ThumbnailWorkerController.class.getName());
+    private final ThumbnailWorkerService thumbnailWorkerService;
+    private static final Logger logger = LoggerFactory.getLogger(ThumbnailWorkerController.class);
 
-    public ThumbnailWorkerController(ThumbnailWorker thumbnailWorker) {
-        this.thumbnailWorker = thumbnailWorker;
+    public ThumbnailWorkerController(ThumbnailWorkerService thumbnailWorkerService) {
+        this.thumbnailWorkerService = thumbnailWorkerService;
     }
 
 
-    @PostMapping("/")
-    public String generateThumbnail(@RequestBody String entity) {
-        logger.info("Received entity: " + entity);
-        thumbnailWorker.generateThumbnail();
-        
-        return entity;
+    @PostMapping("/generate")
+    public ResponseEntity<String> generateThumbnail(@Valid @RequestBody ThumbnailRequest request) {
+        logger.info("Received API request to generate thumbnail for: {}", request.getGcsPath());
+        thumbnailWorkerService.generateThumbnail(request.getGcsPath());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body("Thumbnail generation job accepted for: " + request.getGcsPath());
     }
     
 
