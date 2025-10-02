@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.cdc.ots_thumbnail_worker.controller.dto.ThumbnailRequest;
+import com.cdc.ots_thumbnail_worker.controller.dto.CloudStorageEvent;
 import com.cdc.ots_thumbnail_worker.service.ThumbnailWorkerService;
 
 
@@ -24,11 +24,17 @@ public class ThumbnailWorkerController {
     }
 
 
-    @PostMapping("/generate")
-    public ResponseEntity<String> generateThumbnail(@Valid @RequestBody ThumbnailRequest request) {
-        logger.info("Received API request to generate thumbnail for: {}", request.getGcsPath());
-        thumbnailWorkerService.generateThumbnail(request.getGcsPath());
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body("Thumbnail generation job accepted for: " + request.getGcsPath());
+    @PostMapping("/")
+    public ResponseEntity<String> receiveEvent(@RequestBody CloudStorageEvent event) {
+        if (event == null || event.getData() == null || event.getData().getName() == null) {
+            logger.warn("Received an invalid or empty event payload.");
+            return ResponseEntity.badRequest().body("Invalid event payload.");
+        }
+
+        String gcsPath = event.getData().getName();
+        logger.info("Received event for GCS object: {}", gcsPath);
+        thumbnailWorkerService.generateThumbnail(gcsPath);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body("Thumbnail generation job accepted for: " + gcsPath);
     }
     
 
