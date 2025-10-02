@@ -14,8 +14,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.channels.Channels;
 
 @Service
 public class ThumbnailWorkerService {
@@ -48,20 +49,19 @@ public class ThumbnailWorkerService {
             imageRepository.save(image);
 
             // 2. Download original image from GCS
-            BlobId sourceBlobId = BlobId.of(rawImagesBucket, image.getGcsPath());
+            BlobId sourceBlobId = BlobId.of(rawImagesBucket, gcsPath);
             Blob sourceBlob = storage.get(sourceBlobId);
             if (sourceBlob == null) {
-                throw new RuntimeException("Original image not found in GCS: " + image.getGcsPath());
+                throw new RuntimeException("Original image not found in GCS: " + gcsPath);
             }
-            byte[] imageBytes = sourceBlob.getContent();
 
-            // 3. Compress and resize the image
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            Thumbnails.of(new ByteArrayInputStream(imageBytes))
-                    .size(200, 200) // Target thumbnail size
-                    .outputFormat("jpg")
-                    .toOutputStream(os);
-            byte[] thumbnailBytes = os.toByteArray();
+            // 3. Compress and resize the image using streaming to conserve memory
+            byte[] thumbnailBytes;
+            try (InputStream inputStream = Channels.newInputStream(sourceBlob.reader());
+                 ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+                Thumbnails.of(inputStream).size(200, 200).outputFormat("jpg").toOutputStream(os);
+                thumbnailBytes = os.toByteArray();
+            }
 
             // 4. Upload thumbnail to the thumbnails bucket
             String thumbnailGcsPath = "thumb-" + image.getGcsPath();
