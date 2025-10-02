@@ -3,6 +3,10 @@ package com.cdc.ots_thumbnail_worker.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.ZonedDateTime;
+
 @Entity
 @Table(name = "images")
 public class Image {
@@ -29,24 +33,17 @@ public class Image {
 
     private String thumbnailUrl;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    @CreationTimestamp
+    private ZonedDateTime createdAt;
+
+    @UpdateTimestamp
+    private ZonedDateTime updatedAt;
 
     public enum ThumbnailStatus {
         PENDING,
         PROCESSING,
         DONE,
         ERROR
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -106,11 +103,11 @@ public class Image {
         this.thumbnailUrl = thumbnailUrl;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public ZonedDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public ZonedDateTime getUpdatedAt() {
         return updatedAt;
     }
 }
