@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.cdc.ots_thumbnail_worker.controller.dto.CloudStorageEvent;
+import com.cdc.ots_thumbnail_worker.controller.dto.GcsEventData;
 import com.cdc.ots_thumbnail_worker.service.ThumbnailWorkerService;
 
 
@@ -25,13 +25,13 @@ public class ThumbnailWorkerController {
 
 
     @PostMapping("/")
-    public ResponseEntity<String> receiveEvent(@RequestBody CloudStorageEvent event) {
-        if (event == null || event.getData() == null || event.getData().getName() == null) {
+    public ResponseEntity<String> receiveEvent(@RequestBody GcsEventData event) {
+        if (event == null || event.getName() == null) {
             logger.warn("Received an invalid or empty event payload.");
             return ResponseEntity.badRequest().body("Invalid event payload.");
         }
 
-        String gcsPath = event.getData().getName();
+        String gcsPath = event.getName();
         logger.info("Received event for GCS object: {}", gcsPath);
         thumbnailWorkerService.generateThumbnail(gcsPath);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body("Thumbnail generation job accepted for: " + gcsPath);
