@@ -3,4 +3,4 @@ WORKDIR /app
 COPY target/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-# Trigger build 1
+# Trigger build
